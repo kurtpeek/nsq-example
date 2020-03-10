@@ -2,6 +2,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"os/signal"
 
 	"github.com/nsqio/go-nsq"
 	"github.com/sirupsen/logrus"
@@ -30,6 +33,11 @@ func main() {
 	if err := consumer.ConnectToNSQLookupd("localhost:4161"); err != nil {
 		logrus.WithError(err).Fatal("connect to NSQ Lookup daemon")
 	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	s := <-c
+	fmt.Println("Got signal:", s)
 
 	consumer.Stop()
 }
