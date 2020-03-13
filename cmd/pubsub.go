@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"cloud.google.com/go/pubsub"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -31,11 +32,10 @@ var pubsubCmd = &cobra.Command{
 		}
 		logrus.Infof("Created new Pub/Sub client with project ID %q", projectID)
 
-		pubSubTopic, err = pubSubClient.CreateTopic(context.Background(), pubSubTopicName)
+		pubSubTopic, err = ensureTopic(pubSubTopicName)
 		if err != nil {
-			logrus.WithError(err).Fatal("Failed to create topic")
+			logrus.WithError(err).Fatalf("ensure topic with name %s exists", pubSubTopicName)
 		}
-		logrus.Infof("Created Pub/Sub topic: %v", pubSubTopic)
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		logrus.Infoln("pubsub called")
@@ -47,4 +47,25 @@ func init() {
 
 	pubsubCmd.PersistentFlags().StringVar(&projectID, "projectID", "my-project", "Google project ID")
 	pubsubCmd.PersistentFlags().StringVar(&pubSubTopicName, "pubSubTopicName", "my-topic", "Pub/Sub topic")
+}
+
+func ensureTopic(topicName string) (*pubsub.Topic, error) {
+	topic := pubSubClient.Topic(topicName)
+	exists, err := topic.Exists(context.Background())
+	if err != nil {
+		return nil, errors.Wrap(err, "topic exists")
+	}
+
+	if exists {
+		logrus.Infof("Topic %v already exists.")
+		return topic, nil
+	}
+
+	topic, err = pubSubClient.CreateTopic(context.Background(), topicName)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create Pub/Sub topic")
+	}
+	logrus.Infof("Created Pub/Sub topic: %v", topic)
+
+	return topic, nil
 }
