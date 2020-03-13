@@ -21,3 +21,7 @@ services:
       - nsqlookupd  
     ports:
       - "4171:4171"
+  pubsub-emulator:
+    image: messagebird/gcloud-pubsub-emulator:latest
+    ports:
+      - "8681:8681"
