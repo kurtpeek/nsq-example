@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"net"
 	"os"
+	"time"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/pkg/errors"
@@ -24,6 +26,13 @@ var pubsubCmd = &cobra.Command{
 	Long:  `Run a subcommand to use the Google Pub/Sub emulator`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		os.Setenv("PUBSUB_EMULATOR_HOST", "localhost:8681")
+
+		if conn, err := net.DialTimeout("tcp", "localhost:8681", 1*time.Second); err != nil {
+			logrus.WithError(err).Fatal("Can't connect to the Google Pub/Sub emulator at port 8681. Please start it using 'docker-compose up'.")
+		} else {
+			logrus.Infoln("Connected to the Google Pub/Sub emulator")
+			conn.Close()
+		}
 
 		var err error
 		pubSubClient, err = pubsub.NewClient(context.Background(), projectID)
@@ -57,7 +66,7 @@ func ensureTopic(topicName string) (*pubsub.Topic, error) {
 	}
 
 	if exists {
-		logrus.Infof("Topic %v already exists.")
+		logrus.Infof("Topic %v already exists.", topic)
 		return topic, nil
 	}
 
